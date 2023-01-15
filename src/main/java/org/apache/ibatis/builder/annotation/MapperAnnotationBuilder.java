@@ -118,6 +118,7 @@ public class MapperAnnotationBuilder {
       loadXmlResource();
       configuration.addLoadedResource(resource);
       assistant.setCurrentNamespace(type.getName());
+      // 二级缓存
       parseCache();
       parseCacheRef();
       for (Method method : type.getMethods()) {
@@ -182,6 +183,7 @@ public class MapperAnnotationBuilder {
   }
 
   private void parseCache() {
+    // 二级缓存开关，通过在mapper接口上添加@CacheNamespace来开启
     CacheNamespace cacheDomain = type.getAnnotation(CacheNamespace.class);
     if (cacheDomain != null) {
       Integer size = cacheDomain.size() == 0 ? null : cacheDomain.size();

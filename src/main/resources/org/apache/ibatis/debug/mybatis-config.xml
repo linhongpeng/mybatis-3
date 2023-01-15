@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+  <properties resource="org/apache/ibatis/debug/my-config.properties"/>
+
+  <settings>
+    <!-- 开启日志 -->
+<!--    <setting name="logImpl" value="STDOUT_LOGGING"/>-->
+    <setting name="logImpl" value="SLF4J"/>
+  </settings>
+
+  <!-- 拦截器 -->
+  <plugins>
+    <plugin interceptor="org.apache.ibatis.debug.intercept.Interceptor1">
+      <property name="name" value="张三"/>
+      <property name="age" value="22"/>
+    </plugin>
+  </plugins>
+
+  <environments default="development">
+    <environment id="development">
+      <transactionManager type="JDBC"/>
+      <dataSource type="POOLED">
+        <property name="driver" value="${hello.driver}"/>
+        <property name="url" value="${hello.url}"/>
+        <property name="username" value="${hello.username}"/>
+        <property name="password" value="${hello.password}"/>
+      </dataSource>
+    </environment>
+  </environments>
+
+  <!-- mapper映射文件 -->
+  <mappers>
+    <mapper resource="org/apache/ibatis/debug/UserMapper.xml"/>
+  </mappers>
+
+</configuration>

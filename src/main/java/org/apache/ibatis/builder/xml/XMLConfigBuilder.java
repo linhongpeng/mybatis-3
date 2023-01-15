@@ -96,6 +96,7 @@ public class XMLConfigBuilder extends BaseBuilder {
       throw new BuilderException("Each XMLConfigBuilder can only be used once.");
     }
     parsed = true;
+    // 解析configuration节点的XNode
     parseConfiguration(parser.evalNode("/configuration"));
     return configuration;
   }
@@ -103,12 +104,18 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void parseConfiguration(XNode root) {
     try {
       // issue #117 read properties first
+      // 读取properties标签
       propertiesElement(root.evalNode("properties"));
+      // 读取settings标签
       Properties settings = settingsAsProperties(root.evalNode("settings"));
       loadCustomVfs(settings);
+      // 加载自定义日志实现类
       loadCustomLogImpl(settings);
+      // 加载类型别名
       typeAliasesElement(root.evalNode("typeAliases"));
+      // 加载配置的拦截器链
       pluginElement(root.evalNode("plugins"));
+      // 加载对象工厂
       objectFactoryElement(root.evalNode("objectFactory"));
       objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
       reflectorFactoryElement(root.evalNode("reflectorFactory"));
@@ -116,7 +123,9 @@ public class XMLConfigBuilder extends BaseBuilder {
       // read it after objectFactory and objectWrapperFactory issue #631
       environmentsElement(root.evalNode("environments"));
       databaseIdProviderElement(root.evalNode("databaseIdProvider"));
+      // 加载类型处理器
       typeHandlerElement(root.evalNode("typeHandlers"));
+      // 加载mapper接口
       mapperElement(root.evalNode("mappers"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing SQL Mapper Configuration. Cause: " + e, e);
@@ -244,6 +253,10 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void settingsElement(Properties props) {
     configuration.setAutoMappingBehavior(AutoMappingBehavior.valueOf(props.getProperty("autoMappingBehavior", "PARTIAL")));
     configuration.setAutoMappingUnknownColumnBehavior(AutoMappingUnknownColumnBehavior.valueOf(props.getProperty("autoMappingUnknownColumnBehavior", "NONE")));
+    /**
+     * 二级缓存开关（默认为true，但为true就不代表开启二级缓存）
+     * 就是说默认用CachingExecutor来装饰Executor；在CachingExecutor中判断mapper.xml中是否有<cache></cache>标签，这才是开启二级缓存的标准
+     */
     configuration.setCacheEnabled(booleanValueOf(props.getProperty("cacheEnabled"), true));
     configuration.setProxyFactory((ProxyFactory) createInstance(props.getProperty("proxyFactory")));
     configuration.setLazyLoadingEnabled(booleanValueOf(props.getProperty("lazyLoadingEnabled"), false));
@@ -257,6 +270,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     configuration.setDefaultResultSetType(resolveResultSetType(props.getProperty("defaultResultSetType")));
     configuration.setMapUnderscoreToCamelCase(booleanValueOf(props.getProperty("mapUnderscoreToCamelCase"), false));
     configuration.setSafeRowBoundsEnabled(booleanValueOf(props.getProperty("safeRowBoundsEnabled"), false));
+    // 一级缓存作用域，默认为SESSION，可以通过配置修改成STATEMENT，来缩小一级缓存的作用范围
     configuration.setLocalCacheScope(LocalCacheScope.valueOf(props.getProperty("localCacheScope", "SESSION")));
     configuration.setJdbcTypeForNull(JdbcType.valueOf(props.getProperty("jdbcTypeForNull", "OTHER")));
     configuration.setLazyLoadTriggerMethods(stringSetValueOf(props.getProperty("lazyLoadTriggerMethods"), "equals,clone,hashCode,toString"));
@@ -280,11 +294,15 @@ public class XMLConfigBuilder extends BaseBuilder {
         environment = context.getStringAttribute("default");
       }
       for (XNode child : context.getChildren()) {
+        // 是和默认的环境相同时，解析之
         String id = child.getStringAttribute("id");
         if (isSpecifiedEnvironment(id)) {
+          // 1.解析<transactionManager>节点，决定创建什么类型的TransactionFactory
           TransactionFactory txFactory = transactionManagerElement(child.evalNode("transactionManager"));
+          // 2.创建dataSource
           DataSourceFactory dsFactory = dataSourceElement(child.evalNode("dataSource"));
           DataSource dataSource = dsFactory.getDataSource();
+          // 3.使用了Environment内置的构造器Builder，传递id 事务工厂TransactionFactory和数据源DataSource
           Environment.Builder environmentBuilder = new Environment.Builder(id)
               .transactionFactory(txFactory)
               .dataSource(dataSource);
@@ -314,10 +332,23 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析<transactionManager>节点，创建对应的TransactionFactory
+   *
+   * @param context
+   * @return
+   * @throws Exception
+   */
   private TransactionFactory transactionManagerElement(XNode context) throws Exception {
     if (context != null) {
       String type = context.getStringAttribute("type");
       Properties props = context.getChildrenAsProperties();
+      /*
+       * 在Configuration初始化的时候，会通过以下语句，给JDBC和MANAGED对应的工厂类
+       * typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
+       * typeAliasRegistry.registerAlias("MANAGED", ManagedTransactionFactory.class);
+       * 下述的resolveClass(type).newInstance()会创建对应的工厂实例
+       */
       TransactionFactory factory = (TransactionFactory) resolveClass(type).getDeclaredConstructor().newInstance();
       factory.setProperties(props);
       return factory;

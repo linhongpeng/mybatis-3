@@ -33,6 +33,9 @@ public class Plugin implements InvocationHandler {
 
   private final Object target;
   private final Interceptor interceptor;
+  /**
+   * 拦截接口和拦截方法的映射
+   */
   private final Map<Class<?>, Set<Method>> signatureMap;
 
   private Plugin(Object target, Interceptor interceptor, Map<Class<?>, Set<Method>> signatureMap) {
@@ -41,10 +44,21 @@ public class Plugin implements InvocationHandler {
     this.signatureMap = signatureMap;
   }
 
+  /**
+   * 对一个目标对象进行包装，生成代理类
+   *
+   * @param target
+   * @param interceptor
+   * @return
+   */
   public static Object wrap(Object target, Interceptor interceptor) {
+    // 首先根据interceptor上面定义的注解 获取需要拦截的信息
     Map<Class<?>, Set<Method>> signatureMap = getSignatureMap(interceptor);
+    // 目标对象的Class
     Class<?> type = target.getClass();
+    // 返回需要拦截的接口信息
     Class<?>[] interfaces = getAllInterfaces(type, signatureMap);
+    // 如果长度为>0 则返回代理类 否则不做处理
     if (interfaces.length > 0) {
       return Proxy.newProxyInstance(
           type.getClassLoader(),
@@ -67,15 +81,25 @@ public class Plugin implements InvocationHandler {
     }
   }
 
+  /**
+   * 根据拦截器接口（Interceptor）实现类上面的注解获取相关信息
+   *
+   * @param interceptor
+   * @return
+   */
   private static Map<Class<?>, Set<Method>> getSignatureMap(Interceptor interceptor) {
+    // 获取注解信息
     Intercepts interceptsAnnotation = interceptor.getClass().getAnnotation(Intercepts.class);
     // issue #251
     if (interceptsAnnotation == null) {
       throw new PluginException("No @Intercepts annotation was found in interceptor " + interceptor.getClass().getName());
     }
+    // 获得Signature注解信息
     Signature[] sigs = interceptsAnnotation.value();
     Map<Class<?>, Set<Method>> signatureMap = new HashMap<>();
+    // 循环注解信息
     for (Signature sig : sigs) {
+      // 根据Signature注解定义的type信息去signatureMap当中查询需要拦截方法的集合
       Set<Method> methods = MapUtil.computeIfAbsent(signatureMap, sig.type(), k -> new HashSet<>());
       try {
         Method method = sig.type().getMethod(sig.method(), sig.args());

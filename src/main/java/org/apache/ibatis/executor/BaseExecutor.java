@@ -55,10 +55,16 @@ public abstract class BaseExecutor implements Executor {
   protected Executor wrapper;
 
   protected ConcurrentLinkedQueue<DeferredLoad> deferredLoads;
+  /**
+   * 一级缓存
+   */
   protected PerpetualCache localCache;
   protected PerpetualCache localOutputParameterCache;
   protected Configuration configuration;
 
+  /**
+   * 用来实现嵌套查询的，如果一个查询语句里面还有子查询的话，那么queryStack就会变成1 2 3 4 ...
+   */
   protected int queryStack;
   private boolean closed;
 
@@ -113,6 +119,7 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    // 清理缓存
     clearLocalCache();
     return doUpdate(ms, parameter);
   }
@@ -132,6 +139,7 @@ public abstract class BaseExecutor implements Executor {
   @Override
   public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
     BoundSql boundSql = ms.getBoundSql(parameter);
+    // 这个key其实就是一级缓存的命中条件
     CacheKey key = createCacheKey(ms, parameter, rowBounds, boundSql);
     return query(ms, parameter, rowBounds, resultHandler, key, boundSql);
   }
@@ -149,10 +157,13 @@ public abstract class BaseExecutor implements Executor {
     List<E> list;
     try {
       queryStack++;
+      // 先从一级缓存中查询（一级缓存是默认开启的；在集群部署情况下有数据一致性问题，一级缓存无法支持分布式部署，必须与第三方框架（如redis）集成）
       list = resultHandler == null ? (List<E>) localCache.getObject(key) : null;
       if (list != null) {
+        System.out.println("========== 命中一级缓存 ==========");
         handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
       } else {
+        // 一级缓存中不存在，则从数据库查询
         list = queryFromDatabase(ms, parameter, rowBounds, resultHandler, key, boundSql);
       }
     } finally {

@@ -33,11 +33,18 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 
 /**
+ * 二级缓存（采用装饰者设计模式：在不改变原有类结构和继承的情况下，通过包装原对象去扩展一个新的功能。）
+ * 只专注于实现二级缓存的逻辑
+ * 与一级缓存的区别，二级缓存只有设置了才生效，没设置就不生效
+ *
  * @author Clinton Begin
  * @author Eduardo Macarron
  */
 public class CachingExecutor implements Executor {
 
+  /**
+   * Executor代理对象，为BaseExecutor三种子类中的一种
+   */
   private final Executor delegate;
   private final TransactionalCacheManager tcm = new TransactionalCacheManager();
 
@@ -93,19 +100,23 @@ public class CachingExecutor implements Executor {
   public <E> List<E> query(MappedStatement ms, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql)
       throws SQLException {
     Cache cache = ms.getCache();
+    // 默认情况下是没有开启二级缓存的；需要在SQL映射文件中添加一行<cache/> 或者使用注解来开启
     if (cache != null) {
       flushCacheIfRequired(ms);
       if (ms.isUseCache() && resultHandler == null) {
         ensureNoOutParams(ms, boundSql);
+        // 先从二级缓存查询
         @SuppressWarnings("unchecked")
         List<E> list = (List<E>) tcm.getObject(cache, key);
         if (list == null) {
+          // 二级缓存未命中，则调BaseExecutor，BaseExecutor会先从一级缓存查询
           list = delegate.query(ms, parameterObject, rowBounds, resultHandler, key, boundSql);
           tcm.putObject(cache, key, list); // issue #578 and #116
         }
         return list;
       }
     }
+    // 没有开启二级缓存，则继续使用BaseExecutor查询，而BaseExecutor里面实现了一级缓存
     return delegate.query(ms, parameterObject, rowBounds, resultHandler, key, boundSql);
   }
 

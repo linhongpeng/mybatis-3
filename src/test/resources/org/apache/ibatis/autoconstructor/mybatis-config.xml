@@ -29,10 +29,12 @@
             <transactionManager type="JDBC">
                 <property name="" value=""/>
             </transactionManager>
-            <dataSource type="UNPOOLED">
+            <!-- 如果要使用数据库连接池，type="POOLED" -->
+            <dataSource type="POOLED">
                 <property name="driver" value="org.hsqldb.jdbcDriver"/>
-                <property name="url" value="jdbc:hsqldb:mem:automapping"/>
-                <property name="username" value="sa"/>
+                <property name="url" value="jdbc:mysql://localhost:3306/test"/>
+                <property name="username" value="root"/>
+                <property name="password" value="123456"/>
             </dataSource>
         </environment>
     </environments>

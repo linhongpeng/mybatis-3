@@ -27,6 +27,7 @@ public class InterceptorChain {
   private final List<Interceptor> interceptors = new ArrayList<>();
 
   public Object pluginAll(Object target) {
+    // 一层一层的增强target类，故越靠后的Interceptor越先执行
     for (Interceptor interceptor : interceptors) {
       target = interceptor.plugin(target);
     }

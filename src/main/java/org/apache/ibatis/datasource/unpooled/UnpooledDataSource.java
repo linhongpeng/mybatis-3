@@ -220,8 +220,11 @@ public class UnpooledDataSource implements DataSource {
   }
 
   private Connection doGetConnection(Properties properties) throws SQLException {
+    // 1.初始化驱动：判断driver驱动是否已经加载到内存中，如果还没有加载，则会动态地加载driver类，并实例化一个Driver对象，使用DriverManager.registerDriver()方法将其注册到内存中，以供后续使用。
     initializeDriver();
+    // 2.创建Connection对象：使用DriverManager.getConnection()方法创建连接。
     Connection connection = DriverManager.getConnection(url, properties);
+    // 3.配置Connection对象：设置是否自动提交autoCommit和隔离级别isolationLevel。
     configureConnection(connection);
     return connection;
   }

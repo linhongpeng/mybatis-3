@@ -23,12 +23,44 @@ public class ErrorContext {
   private static final String LINE_SEPARATOR = System.lineSeparator();
   private static final ThreadLocal<ErrorContext> LOCAL = ThreadLocal.withInitial(ErrorContext::new);
 
+  /**
+   * 存储仓库可以用来存储ErrorContext
+   */
   private ErrorContext stored;
+  /**
+   * 如果是解析文件，比如xml,那么resource就是文件名，如果是请求网络，那就是url
+   */
   private String resource;
+  /**
+   * 什么行为，是update还是insert还是什么
+   */
   private String activity;
+  /**
+   * 存储哪个对象操作时发生异常
+   * <p>如：### The error may involve defaultParameterMap</p>
+   */
   private String object;
+  /**
+   * 存储异常的概览信息
+   * <p>如：### Error querying database. Cause: java.sql.SQLSyntaxErrorException: Unknown column 'id2' in 'field list'</p>
+   */
   private String message;
+  /**
+   * 存储发生日常的 SQL 语句
+   * <p>如：### SQL: select id2, name, sex, phone from author where name = ?</p>
+   */
   private String sql;
+  /**
+   * 存储详细的 Java 异常日志
+   * <pre>
+   *   如：### Cause: java.sql.SQLSyntaxErrorException: Unknown column 'id2' in 'field list'
+   *                 at org.apache.ibatis.exceptions.ExceptionFactory.wrapException(ExceptionFactory.java:30)
+   *                 at org.apache.ibatis.session.defaults.DefaultSqlSession.selectList(DefaultSqlSession.java:150)
+   *                 at org.apache.ibatis.session.defaults.DefaultSqlSession.selectList(DefaultSqlSession.java:141)
+   *                 at org.apache.ibatis.binding.MapperMethod.executeForMany(MapperMethod.java:139)
+   *                 at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:76)
+   * </pre>
+   */
   private Throwable cause;
 
   private ErrorContext() {
